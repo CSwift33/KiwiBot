@@ -3,20 +3,32 @@ using System.Threading;
 using Microsoft.SPOT;
 using Microsoft.SPOT.Hardware;
 
+//  AP Physics E&M Final Project: Kiwi Bot
+//  Code for Kiwi Bot
+
+//  Conner Swift
+//  Nathan Petrie
+//  Sam Battalio
+//  Chris Dell
+//  Frank Salek
+//  Conrad Adams
+//  Adam Dewey
+//  Blake Witchie
+
 namespace KiwiBotCode
 {
     public class Program
     {
         //////////////////////  Variables and Objects for Motors  //////////////////////
         //  Talons IDs of the TalonSRXs
-        const int FRONT_WHEEL_TALON_ID = 1;
-        const int BACK_RIGHT_TALON_ID = 2;
-        const int BACK_LEFT_TALON_ID = 3;
+        const int FRONT_WHEEL_TALON_ID = 1;  //  TBD
+        const int BACK_RIGHT_TALON_ID = 2;  //  TBD
+        const int BACK_LEFT_TALON_ID = 3;  //  TBD
 
         //  Booleans for Inverted the Motors
-        const bool FRONT_MOTOR_INVERTED = false;
-        const bool BACK_RIGHT_MOTOR_INVERTED = false;
-        const bool BACK_LEFT_MOTOR_INVERTED = false;
+        const bool FRONT_MOTOR_INVERTED = false;  //  TBD
+        const bool BACK_RIGHT_MOTOR_INVERTED = false;  //  TBD
+        const bool BACK_LEFT_MOTOR_INVERTED = false;  //  TBD
 
         //  Creating an object for the Motors with their specified Talon IDs
         static CTRE.TalonSrx frontMotor = new CTRE.TalonSrx(FRONT_WHEEL_TALON_ID);
@@ -24,25 +36,20 @@ namespace KiwiBotCode
         static CTRE.TalonSrx backLeftMotor = new CTRE.TalonSrx(BACK_LEFT_TALON_ID);
 
         //  Variables for Determining the Motor Power For Each Motor
-        static float overallMotorPowerFactor = 0.0f;
-
         static float frontWheelMotorPower = 0.0f;
         static float backRightMotorPower = 0.0f;
         static float backLeftMotorPower = 0.0f;
 
-        static float factoredFrontWheelMotorPower = 0.0f;
-        static float factoredBackRightMotorPower = 0.0f;
-        static float factoredBackLeftMotorPower = 0.0f;
         ////////////////////////////////////////////////////////////////////////////////
         ////////////////  Variables and Objects for Controller Inputs  /////////////////
         //  Creating an object to receive inputs from the Controller
         static CTRE.Gamepad controller = new CTRE.Gamepad(new CTRE.UsbHostDevice());
 
         //  Indexes of the Joysticks
-        const int LEFT_Y_AXIS_INDEX = 1;
-        const int LEFT_X_AXIS_INDEX = 0;
-        const int RIGHT_Y_AXIS_INDEX = 5;
-        const int RIGHT_X_AXIS_INDEX = 2;
+        const int LEFT_Y_AXIS_INDEX = 1;  // TBD
+        const int LEFT_X_AXIS_INDEX = 0;  //  TBD
+        const int RIGHT_Y_AXIS_INDEX = 5;  //  TBD
+        const int RIGHT_X_AXIS_INDEX = 3;  //  TBD
 
         //  Variables for the Values for the Joysticks
         static float deadbandedLeftJoystickYAxisValue = 0.0f;
@@ -50,7 +57,7 @@ namespace KiwiBotCode
         static float deadbandedRightJoystickXAxisValue = 0.0f;
 
         //  Deadband Value for the Joystick
-        const float JOYSTICK_DEADBAND_VALUE = .1f;
+        const float JOYSTICK_DEADBAND_VALUE = .1f;  //  TBD
         ////////////////////////////////////////////////////////////////////////////////
         //////////////////////// Function to Invert the Motors  ////////////////////////
         static void InitializeMotors()
@@ -103,27 +110,43 @@ namespace KiwiBotCode
             backLeftMotor.Set(backLeftMotorPower);
         }
 
+        ////////////////////////////////////////////////////////////////////////////////
+        ///////  Function to Rotate Robot with the X Axis of the Right Joystick  ///////
         static void RotateRobot(float rightJoystickXAxis)
         {
+            //  If the Right Joystick is directed to the right, rotate the robot right
+            //  If the Right Joystick is directed to the left, rotate the robot left
             frontMotor.Set(rightJoystickXAxis);
             backRightMotor.Set(rightJoystickXAxis);
             backLeftMotor.Set(rightJoystickXAxis);
         }
 
+        ////////////////////////////////////////////////////////////////////////////////
+        //////////////////  Function where all the code is executed  ///////////////////
         public static void Main()
         {
-
+            //  Invert the Motors to the correct direction
             InitializeMotors();
 
+            //  Everything in the While Loop will continuously run until the robot is turned off
             while (true)
             {
+                //  If the Controller is connected to the HERO Development Board, the user can drive the robot
                 if (controller.GetConnectionStatus() == CTRE.UsbDeviceConnection.Connected)
                 {
+                    //  Get the Right X Axis Joystick Value and Deadband it
                     deadbandedRightJoystickXAxisValue = DeadbandJoystick(controller.GetAxis(RIGHT_X_AXIS_INDEX));
+
+                    //  If the Right X Axis Joystick Value does not equal zero, the robot will rotate
+                    //  Control with the Left Joystick will be disabled if the user decides to rotate the robot
+                    //  This essesntially allows the user to rotate the robot if he/she moves the Right X Axis Joystick Value out
+                    //  of the Deadband
                     if (deadbandedRightJoystickXAxisValue != 0.0f)
                     {
                         RotateRobot(deadbandedRightJoystickXAxisValue);
                     }
+                    //  If the Right X Axis Joystick Value is zero, control the direction and magnitude of the speed
+                    //  of the robot with the Left Joystick
                     else
                     {
                         deadbandedLeftJoystickYAxisValue = DeadbandJoystick(controller.GetAxis(LEFT_Y_AXIS_INDEX));
@@ -131,13 +154,17 @@ namespace KiwiBotCode
                         DriveKiwiBotWithJoystickValuesNoRotation(deadbandedLeftJoystickYAxisValue, deadbandedLeftJoystickXAxisValue);
                     }
                 }
+                //  If the Controller is not connected to the HERO Development Board, the user cannot move the robot
                 else
                 {
                     StopAllMotors();
                 }
 
+                //  Update the Motor Powers calculated in the above code
                 CTRE.Watchdog.Feed();
 
+                //  Wait 10ms
+                //  All the code in the While Loop will execute every 10ms
                 System.Threading.Thread.Sleep(10);
             }
         }
