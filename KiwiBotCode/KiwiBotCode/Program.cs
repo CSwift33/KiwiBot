@@ -44,6 +44,10 @@ namespace KiwiBotCode
         const float MAX_ROTATING_MOTOR_POWER = .5f;
         static float rotatingMotorPower = 0.0f;
 
+        //  Variables for determining how fast the robot should be steering
+        const float MAX_STEERING_MOTOR_POWER = .35f;
+        static float steeringMotorPower = 0.0f;
+
         ////////////////  Variables and Objects for Controller Inputs  /////////////////
         //  Creating an object to receive inputs from the Controller
         static CTRE.Gamepad controller = new CTRE.Gamepad(new CTRE.UsbHostDevice());
@@ -53,6 +57,27 @@ namespace KiwiBotCode
         const int LEFT_X_AXIS_INDEX = 0;
         const int RIGHT_Y_AXIS_INDEX = 5;
         const int RIGHT_X_AXIS_INDEX = 2;
+
+        //  Button Numbers on Joysticks
+        const int buttonXIndex = 1;
+        const int buttonAIndex = 2;
+        const int buttonBIndex = 3;
+        const int buttonYIndex = 4;
+
+        const int buttonLBIndex = 5;
+        const int buttonRBIndex = 6;
+        const int buttonLTIndex = 7;
+        const int buttonRTIndex = 8;
+
+        const int buttonSelect = 9;
+        const int buttonStart = 10;
+
+        //  Boolean for determining whether the Select Button is Pressed.
+        //  Button is used for switching between the Driving Modes
+        static bool selectButtonPressed = false;
+        const bool ARCADE_DRIVE = true;
+        const bool DRIVING_WITH_STEERING = false;
+        static bool arcadeDriveSelection = ARCADE_DRIVE;
 
         //  Variables for the Values for the Joysticks
         static float deadbandedLeftJoystickYAxisValue = 0.0f;
@@ -109,7 +134,7 @@ namespace KiwiBotCode
             backRightMotor.Set(backRightMotorPower);
             backLeftMotor.Set(backLeftMotorPower);
         }
-
+        ////////////////////////////////////////////////////////////////////////////////
         ///////  Function to Rotate Robot with the X Axis of the Right Joystick  ///////
         static void RotateRobot(float rightJoystickXAxis)
         {
@@ -121,6 +146,19 @@ namespace KiwiBotCode
             frontMotor.Set(rotatingMotorPower);
             backRightMotor.Set(rotatingMotorPower);
             backLeftMotor.Set(rotatingMotorPower);
+        }
+        ////////////////////////////////////////////////////////////////////////////////
+        ////////////  Function to Drive and Turn the Robot simultaneously  /////////////
+        static void DriveRobotWithSteeringControl(float deadbandedLeftJoystickYAxis, float deadbandedRightJoystickXAxis)
+        {
+            //  The two Back Motors will drive the robot forward
+            backRightMotor.Set(-deadbandedLeftJoystickYAxis);
+            backLeftMotor.Set(deadbandedLeftJoystickYAxis);
+
+            //  The Front wheel will control the steering of the robot
+            //  Note: The motor power for steering control is scaled down
+            steeringMotorPower = (deadbandedRightJoystickXAxis * MAX_STEERING_MOTOR_POWER);
+            frontMotor.Set(steeringMotorPower);
         }
 
         //////////////////  Function where all the code is executed  ///////////////////
@@ -135,26 +173,48 @@ namespace KiwiBotCode
                 //  If the Controller is connected to the HERO Development Board, the user can drive the robot
                 if (controller.GetConnectionStatus() == CTRE.UsbDeviceConnection.Connected)
                 {
-                    //  Get the Right X Axis Joystick Value and Deadband it
+                    //  Get the Joystick Values and Deadband them
+                    //  Since moving the Joysticks up on the y-axis is in the negative direction, the value of the 
+                    //  left Joystick Y Axis is multiplied by -1 so it's treated as being positive
+                    deadbandedLeftJoystickYAxisValue = -DeadbandJoystick(controller.GetAxis(LEFT_Y_AXIS_INDEX));
+                    deadbandedLeftJoystickXAxisValue = DeadbandJoystick(controller.GetAxis(LEFT_X_AXIS_INDEX));
                     deadbandedRightJoystickXAxisValue = DeadbandJoystick(controller.GetAxis(RIGHT_X_AXIS_INDEX));
 
-                    //  If the Right X Axis Joystick Value does not equal zero, the robot will rotate
-                    //  Control with the Left Joystick will be disabled if the user decides to rotate the robot
-                    //  This essesntially allows the user to rotate the robot if he/she moves the Right X Axis Joystick Value out
-                    //  of the Deadband
-                    if (deadbandedRightJoystickXAxisValue != 0.0f)
+                    //  Button used to switch between different Driving Modes
+                    //  The Button is programmed as a toggle between the two Driving Modes
+                    if (controller.GetButton(buttonSelect))
                     {
-                        RotateRobot(deadbandedRightJoystickXAxisValue);
+                        if (selectButtonPressed == false)
+                        {
+                            arcadeDriveSelection = !arcadeDriveSelection;
+                            selectButtonPressed = true;
+                        }
                     }
-                    //  If the Right X Axis Joystick Value is zero, control the direction and magnitude of the speed
-                    //  of the robot with the Left Joystick
                     else
                     {
-                        //  Since moving the Joysticks up on the y-axis is in the negative direction, the value is
-                        //  multiplied by -1 so it's treated as being positive
-                        deadbandedLeftJoystickYAxisValue = -DeadbandJoystick(controller.GetAxis(LEFT_Y_AXIS_INDEX));
-                        deadbandedLeftJoystickXAxisValue = DeadbandJoystick(controller.GetAxis(LEFT_X_AXIS_INDEX));
-                        DriveKiwiBotWithJoystickValuesNoRotation(deadbandedLeftJoystickYAxisValue, deadbandedLeftJoystickXAxisValue);
+                        selectButtonPressed = false;
+                    }
+
+                    if (arcadeDriveSelection == ARCADE_DRIVE)
+                    {
+                        //  If the Right X Axis Joystick Value does not equal zero, the robot will rotate.
+                        //  Control with the Left Joystick will be disabled if the user decides to rotate the robot
+                        //  This essentially allows the user to rotate the robot if he/she moves the Right X Axis Joystick Value out
+                        //  of the Deadband
+                        if (deadbandedRightJoystickXAxisValue != 0.0f)
+                        {
+                            RotateRobot(deadbandedRightJoystickXAxisValue);
+                        }
+                        //  If the Right X Axis Joystick Value is zero, control the direction and magnitude of the speed
+                        //  of the robot with the Left Joystick
+                        else
+                        {
+                            DriveKiwiBotWithJoystickValuesNoRotation(deadbandedLeftJoystickYAxisValue, deadbandedLeftJoystickXAxisValue);
+                        }
+                    }
+                    else if (arcadeDriveSelection == DRIVING_WITH_STEERING)
+                    {
+                        DriveRobotWithSteeringControl(deadbandedLeftJoystickYAxisValue, deadbandedRightJoystickXAxisValue);
                     }
                 }
                 //  If the Controller is not connected to the HERO Development Board, the user cannot move the robot
