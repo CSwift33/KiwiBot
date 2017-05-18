@@ -21,14 +21,14 @@ namespace KiwiBotCode
     {
         //////////////////////  Variables and Objects for Motors  //////////////////////
         //  Talons IDs of the TalonSRXs
-        const int FRONT_WHEEL_TALON_ID = 1;  //  TBD
-        const int BACK_RIGHT_TALON_ID = 2;  //  TBD
-        const int BACK_LEFT_TALON_ID = 3;  //  TBD
+        const int FRONT_WHEEL_TALON_ID = 2;
+        const int BACK_RIGHT_TALON_ID = 1;
+        const int BACK_LEFT_TALON_ID = 3;
 
-        //  Booleans for Inverted the Motors
-        const bool FRONT_MOTOR_INVERTED = false;  //  TBD
-        const bool BACK_RIGHT_MOTOR_INVERTED = false;  //  TBD
-        const bool BACK_LEFT_MOTOR_INVERTED = false;  //  TBD
+        //  Booleans for Invertiong the Motors
+        const bool FRONT_MOTOR_INVERTED = true;
+        const bool BACK_RIGHT_MOTOR_INVERTED = true;
+        const bool BACK_LEFT_MOTOR_INVERTED = true;
 
         //  Creating an object for the Motors with their specified Talon IDs
         static CTRE.TalonSrx frontMotor = new CTRE.TalonSrx(FRONT_WHEEL_TALON_ID);
@@ -40,16 +40,19 @@ namespace KiwiBotCode
         static float backRightMotorPower = 0.0f;
         static float backLeftMotorPower = 0.0f;
 
-        ////////////////////////////////////////////////////////////////////////////////
+        //  Variables for determining how fast the robot should be rotating
+        const float MAX_ROTATING_MOTOR_POWER = .5f;
+        static float rotatingMotorPower = 0.0f;
+
         ////////////////  Variables and Objects for Controller Inputs  /////////////////
         //  Creating an object to receive inputs from the Controller
         static CTRE.Gamepad controller = new CTRE.Gamepad(new CTRE.UsbHostDevice());
 
         //  Indexes of the Joysticks
-        const int LEFT_Y_AXIS_INDEX = 1;  // TBD
-        const int LEFT_X_AXIS_INDEX = 0;  //  TBD
-        const int RIGHT_Y_AXIS_INDEX = 5;  //  TBD
-        const int RIGHT_X_AXIS_INDEX = 3;  //  TBD
+        const int LEFT_Y_AXIS_INDEX = 1;
+        const int LEFT_X_AXIS_INDEX = 0;
+        const int RIGHT_Y_AXIS_INDEX = 5;
+        const int RIGHT_X_AXIS_INDEX = 2;
 
         //  Variables for the Values for the Joysticks
         static float deadbandedLeftJoystickYAxisValue = 0.0f;
@@ -58,7 +61,7 @@ namespace KiwiBotCode
 
         //  Deadband Value for the Joystick
         const float JOYSTICK_DEADBAND_VALUE = .1f;  //  TBD
-        ////////////////////////////////////////////////////////////////////////////////
+
         //////////////////////// Function to Invert the Motors  ////////////////////////
         static void InitializeMotors()
         {
@@ -70,7 +73,6 @@ namespace KiwiBotCode
             backLeftMotor.SetInverted(BACK_LEFT_MOTOR_INVERTED);
         }
 
-        ////////////////////////////////////////////////////////////////////////////////
         ///////////////////////// Function to Stop All Motors  /////////////////////////
         static void StopAllMotors()
         {
@@ -80,7 +82,6 @@ namespace KiwiBotCode
             backLeftMotor.Set(0.0f);
         }
 
-        ////////////////////////////////////////////////////////////////////////////////
         ////////  Function to Deadband the Joysticks Given the Joystick Value  /////////
         static float DeadbandJoystick(float joystickValue)
         {
@@ -95,7 +96,6 @@ namespace KiwiBotCode
             return joystickValue;
         }
 
-        ////////////////////////////////////////////////////////////////////////////////
         ////  Function to Drive Robot With Magnitude and Direction of Left Joystick  ///
         static void DriveKiwiBotWithJoystickValuesNoRotation(float leftJoystickYAxis, float leftJoystickXAxis)
         {
@@ -110,18 +110,19 @@ namespace KiwiBotCode
             backLeftMotor.Set(backLeftMotorPower);
         }
 
-        ////////////////////////////////////////////////////////////////////////////////
         ///////  Function to Rotate Robot with the X Axis of the Right Joystick  ///////
         static void RotateRobot(float rightJoystickXAxis)
         {
             //  If the Right Joystick is directed to the right, rotate the robot right
             //  If the Right Joystick is directed to the left, rotate the robot left
-            frontMotor.Set(rightJoystickXAxis);
-            backRightMotor.Set(rightJoystickXAxis);
-            backLeftMotor.Set(rightJoystickXAxis);
+
+            rotatingMotorPower = (rightJoystickXAxis * MAX_ROTATING_MOTOR_POWER);
+
+            frontMotor.Set(rotatingMotorPower);
+            backRightMotor.Set(rotatingMotorPower);
+            backLeftMotor.Set(rotatingMotorPower);
         }
 
-        ////////////////////////////////////////////////////////////////////////////////
         //////////////////  Function where all the code is executed  ///////////////////
         public static void Main()
         {
@@ -149,7 +150,9 @@ namespace KiwiBotCode
                     //  of the robot with the Left Joystick
                     else
                     {
-                        deadbandedLeftJoystickYAxisValue = DeadbandJoystick(controller.GetAxis(LEFT_Y_AXIS_INDEX));
+                        //  Since moving the Joysticks up on the y-axis is in the negative direction, the value is
+                        //  multiplied by -1 so it's treated as being positive
+                        deadbandedLeftJoystickYAxisValue = -DeadbandJoystick(controller.GetAxis(LEFT_Y_AXIS_INDEX));
                         deadbandedLeftJoystickXAxisValue = DeadbandJoystick(controller.GetAxis(LEFT_X_AXIS_INDEX));
                         DriveKiwiBotWithJoystickValuesNoRotation(deadbandedLeftJoystickYAxisValue, deadbandedLeftJoystickXAxisValue);
                     }
